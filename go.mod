@@ -2,10 +2,12 @@ module github.com/gregdel/netd
 
 go 1.14
 
+replace github.com/gregdel/nft => ../nft
+
+replace github.com/google/nftables => ../nftables
+
 require (
-	github.com/google/nftables v0.0.0-20200227072857-9caf4234bf8a
-	github.com/gregdel/nft v0.0.0-20200305184904-c21dab9bf7da
-	github.com/mdlayher/netlink v1.1.0 // indirect
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
-	golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527 // indirect
+	github.com/google/nftables v0.0.0-20200316075819-7127d9d22474
+	github.com/gregdel/nft v0.0.0-20200311121651-707a452b35bb
+	github.com/kr/pretty v0.2.0
 )

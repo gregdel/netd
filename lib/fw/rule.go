@@ -1,17 +1,14 @@
 package fw
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/google/nftables/expr"
 )
 
 // Rule represents a firewall rule
 type Rule struct {
-	Chain   UserChain
-	Match   *Match
-	Actions []Action
+	Chain   UserChain `json:"chain,omitempty"`
+	Match   *Match    `json:"match,omitempty"`
+	Actions Actions   `json:"actions,omitempty"`
 }
 
 // Expr represents all the required expression for a rule
@@ -39,75 +36,6 @@ func (r *Rule) Validate() error {
 		if err := action.Validate(); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements the Mashaler interface
-func (r *Rule) MarshalJSON() ([]byte, error) {
-	type actionType struct {
-		Action `json:"params"`
-		Type   string `json:"type"`
-	}
-
-	aux := struct {
-		Chain   UserChain    `json:"chain"`
-		Match   *Match       `json:"match"`
-		Actions []actionType `json:"actions"`
-	}{
-		Chain:   r.Chain,
-		Match:   r.Match,
-		Actions: []actionType{},
-	}
-
-	for _, a := range r.Actions {
-		aux.Actions = append(aux.Actions, actionType{
-			Action: a,
-			Type:   a.Type(),
-		})
-	}
-
-	return json.Marshal(aux)
-}
-
-// UnmarshalJSON implements the Unmashaler interface
-func (r *Rule) UnmarshalJSON(data []byte) error {
-	type actionType struct {
-		Params json.RawMessage `json:"params"`
-		Type   string          `json:"type"`
-	}
-
-	aux := struct {
-		Chain   UserChain    `json:"chain"`
-		Match   *Match       `json:"match"`
-		Actions []actionType `json:"actions"`
-	}{}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-
-	r.Chain = aux.Chain
-	r.Match = aux.Match
-	r.Actions = []Action{}
-
-	for _, a := range aux.Actions {
-		var action Action
-		switch a.Type {
-		case "dnat":
-			action = &DNAT{}
-		case "limit":
-			action = &Limit{}
-		default:
-			return fmt.Errorf("unhandle action type %s", a.Type)
-		}
-
-		if err := json.Unmarshal(a.Params, action); err != nil {
-			return err
-		}
-
-		r.Actions = append(r.Actions, action)
 	}
 
 	return nil

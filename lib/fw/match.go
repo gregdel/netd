@@ -9,11 +9,11 @@ import (
 
 // Match represents the matching of a packet
 type Match struct {
-	SrcIP    *net.IPNet `json:"src_ip"`
-	SrcPort  uint16     `json:"src_port"`
-	DestIP   *net.IPNet `json:"dest_ip"`
-	DestPort uint16     `json:"dest_port"`
-	Protocol uint16     `json:"protocol"`
+	SrcIP    *net.IPNet `json:"src_ip,omitempty"`
+	SrcPort  uint16     `json:"src_port,omitempty"`
+	DestIP   *net.IPNet `json:"dest_ip,omitempty"`
+	DestPort uint16     `json:"dest_port,omitempty"`
+	Protocol uint16     `json:"protocol,omitempty"`
 }
 
 // Type implements the Action interface

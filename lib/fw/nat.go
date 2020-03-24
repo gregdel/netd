@@ -15,8 +15,8 @@ var (
 
 // DNAT represents a DNAT
 type DNAT struct {
-	IP   net.IP `json:"ip"`
-	Port uint16 `json:"port"`
+	IP   net.IP `json:"ip,omitempty"`
+	Port uint16 `json:"port,omitempty"`
 }
 
 // Type implements the Action interface

@@ -14,11 +14,11 @@ var (
 
 // Limit represents a limit
 type Limit struct {
-	LimitType expr.LimitType `json:"limit_type"`
-	Rate      uint64         `json:"rate"`
-	Over      bool           `json:"over"`
-	Unit      expr.LimitTime `json:"unit"`
-	Burst     uint32         `json:"burst"`
+	LimitType expr.LimitType `json:"limit_type,omitempty"`
+	Rate      uint64         `json:"rate,omitempty"`
+	Over      bool           `json:"over,omitempty"`
+	Unit      expr.LimitTime `json:"unit,omitempty"`
+	Burst     uint32         `json:"burst,omitempty"`
 }
 
 // Type implements the Action interface

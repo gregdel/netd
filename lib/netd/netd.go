@@ -6,22 +6,31 @@ import (
 	"github.com/gregdel/netd/lib/fw"
 )
 
+// Config represents the netd configuration options
+type Config struct {
+	FirewallConfig *fw.Config
+}
+
 // Netd represents the network daemon parameters
 type Netd struct {
-	netnsPath string
-	firewall  *fw.Firewall
+	config   *Config
+	firewall *fw.Firewall
 }
 
 // New returns a new netd struct
-func New(netnsPath string) *Netd {
+func New(config *Config) *Netd {
+	if config == nil {
+		config = &Config{}
+	}
+
 	return &Netd{
-		netnsPath: netnsPath,
+		config: config,
 	}
 }
 
 // Init initializes netd
 func (n *Netd) Init() error {
-	firewall, err := fw.NewFromNetnsPath(n.netnsPath)
+	firewall, err := fw.New(n.config.FirewallConfig)
 	if err != nil {
 		return err
 	}
@@ -45,6 +54,8 @@ func (n *Netd) ReloadFirewall() error {
 		return err
 	}
 
+	n.firewall.Reset()
+
 	for _, r := range rules {
 		err := n.firewall.AddRule(r)
 		if err != nil {
@@ -57,13 +68,5 @@ func (n *Netd) ReloadFirewall() error {
 		return err
 	}
 
-	n.firewall.ShowRules()
-
-	return nil
-}
-
-// Run runs netd
-func (n *Netd) Run() error {
-	// TODO watch for new files and load them
 	return nil
 }

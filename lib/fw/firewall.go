@@ -3,21 +3,25 @@ package fw
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/google/nftables"
-	"github.com/kr/pretty"
 )
 
-// DefaultRuntimePath is the default runtime path
-const DefaultRuntimePath = "/tmp/netd/fw"
+const (
+	// DefaultRuntimeDirectory is the default runtime directory of netd.
+	DefaultRuntimeDirectory = "/run/netd"
+	// DefaultRuleFile is the default file containing the rules
+	DefaultRuleFile = "fw_rules.json"
+)
 
 // Custom error
 var (
 	ErrMissingNetlinkConn = errors.New("fw: missing netlink conn")
 	ErrChainNotFound      = errors.New("fw: chain not found")
+	ErrMissingRuntimeDir  = errors.New("fw: missing runtime directory")
 )
 
 // UserChain representing the user writeable chains
@@ -28,16 +32,41 @@ const (
 	ChainPreroutingDNAT UserChain = "prerouting_dnat"
 )
 
+// Config represents the firewall configuration options
+type Config struct {
+	NetnsPath        string
+	RuntimeDirectory string
+	RulesFilePath    string
+
+	rulesPath string
+}
+
 // Firewall represents the firewall
 type Firewall struct {
+	config *Config
 	nft    *nftables.Conn
 	chains map[UserChain]*nftables.Chain
 }
 
 // new returns a new firewall
-func new(conn *nftables.Conn) (*Firewall, error) {
+func new(c *Config, conn *nftables.Conn) (*Firewall, error) {
+	if c == nil {
+		c = &Config{}
+	}
+
+	if c.RuntimeDirectory == "" {
+		c.RuntimeDirectory = DefaultRuntimeDirectory
+	}
+
+	if c.RulesFilePath == "" {
+		c.RulesFilePath = DefaultRuleFile
+	}
+
+	c.rulesPath = filepath.Join(c.RuntimeDirectory, c.RulesFilePath)
+
 	return &Firewall{
-		nft: conn,
+		config: c,
+		nft:    conn,
 		chains: map[UserChain]*nftables.Chain{
 			ChainPreroutingDNAT: nil,
 		},
@@ -45,26 +74,43 @@ func new(conn *nftables.Conn) (*Firewall, error) {
 }
 
 // New returns a new firewall
-func New() (*Firewall, error) {
-	return new(&nftables.Conn{})
-}
-
-// NewFromNetnsPath returns a new firewall from a netns path
-func NewFromNetnsPath(path string) (*Firewall, error) {
-	fd, err := syscall.Open(path, syscall.O_RDONLY, 0)
+func New(c *Config) (*Firewall, error) {
+	fw, err := new(c, &nftables.Conn{})
 	if err != nil {
 		return nil, err
 	}
-	// TODO: check how to close this properly (if needed)
-	// defer syscall.Close(fd)
-	conn := &nftables.Conn{NetNS: fd}
-	return new(conn)
+
+	if fw.config.NetnsPath != "" {
+		fd, err := syscall.Open(fw.config.NetnsPath, syscall.O_RDONLY, 0)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: check how to close this properly (if needed)
+		// defer syscall.Close(fd)
+		fw.nft = &nftables.Conn{NetNS: fd}
+	}
+
+	return fw, nil
 }
 
 // Init fetches the current firewall state
 func (f *Firewall) Init() error {
 	if f.nft == nil {
 		return ErrMissingNetlinkConn
+	}
+
+	// Check if the runtime directory exists
+	stat, err := os.Stat(f.config.RuntimeDirectory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return ErrMissingRuntimeDir
+		}
+
+		return err
+	}
+
+	if !stat.IsDir() {
+		return ErrMissingRuntimeDir
 	}
 
 	chains, err := f.nft.ListChains()
@@ -80,6 +126,13 @@ func (f *Firewall) Init() error {
 	}
 
 	return nil
+}
+
+// Reset flushes the rules from the registered chains
+func (f *Firewall) Reset() {
+	for _, c := range f.chains {
+		f.nft.FlushChain(c)
+	}
 }
 
 // Commit commits the firewall rules
@@ -107,25 +160,9 @@ func (f *Firewall) AddRule(rule *Rule) error {
 	return nil
 }
 
-// ShowRules needs to be removed TODO: remove this sub
-func (f *Firewall) ShowRules() {
-	c, ok := f.chains[ChainPreroutingDNAT]
-	if !ok {
-		fmt.Println("missing chains")
-		return
-	}
-
-	rules, err := f.nft.GetRule(c.Table, c)
-	if err != nil {
-		fmt.Println("error: ", err)
-		return
-	}
-	pretty.Println(rules)
-}
-
 // ReadRules reads the rules from a file
 func (f *Firewall) ReadRules() ([]*Rule, error) {
-	file, err := os.Open("/tmp/netd/fw_rules.json")
+	file, err := os.Open(f.config.rulesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +174,7 @@ func (f *Firewall) ReadRules() ([]*Rule, error) {
 
 // WriteRules writes the rules to a file
 func (f *Firewall) WriteRules(rules []*Rule) error {
-	file, err := os.Create("/tmp/netd/fw_rules.json")
+	file, err := os.Create(f.config.rulesPath)
 	if err != nil {
 		return err
 	}

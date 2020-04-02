@@ -34,11 +34,23 @@ func run() error {
 		},
 	}
 
-	// Create the runtime directory
-	if err := os.Mkdir(*runtimeDirectory, os.ModePerm); err != nil {
-		return err
+	// Create the runtime directory, do nothing if it's already there, fail if
+	// it's not at directory
+	stat, err := os.Stat(*runtimeDirectory)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+
+		// Create the directory and remove it when the program stops
+		if err := os.Mkdir(*runtimeDirectory, os.ModePerm); err != nil {
+			return err
+		}
+		defer os.RemoveAll(*runtimeDirectory)
 	}
-	defer os.RemoveAll(*runtimeDirectory)
+	if stat != nil && !stat.IsDir() {
+		return fmt.Errorf("%s is not a directory", *runtimeDirectory)
+	}
 
 	netd := netd.New(config)
 	if err := netd.Init(); err != nil {

@@ -1,7 +1,14 @@
 package fw
 
 import (
+	"errors"
+
 	"github.com/google/nftables/expr"
+)
+
+// Custom errors
+var (
+	ErrMissingRuleActions = errors.New("fw: missing rule actions")
 )
 
 // Rule represents a firewall rule
@@ -28,8 +35,8 @@ func (r *Rule) Expr() []expr.Any {
 
 // Validate the rules
 func (r *Rule) Validate() error {
-	if err := r.Match.Validate(); err != nil {
-		return err
+	if len(r.Actions) == 0 {
+		return ErrMissingRuleActions
 	}
 
 	for _, action := range r.Actions {
@@ -38,5 +45,9 @@ func (r *Rule) Validate() error {
 		}
 	}
 
-	return nil
+	if r.Match == nil {
+		return nil
+	}
+
+	return r.Match.Validate()
 }

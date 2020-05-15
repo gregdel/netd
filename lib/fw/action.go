@@ -57,6 +57,12 @@ func (as *Actions) UnmarshalJSON(data []byte) error {
 			action = &DNAT{}
 		case "limit":
 			action = &Limit{}
+		case "drop":
+			action = &Drop{}
+		case "accept":
+			action = &Accept{}
+		case "counter":
+			action = &Counter{}
 		default:
 			return fmt.Errorf("unhandle action type %s", a.Type)
 		}

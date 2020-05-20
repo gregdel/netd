@@ -23,3 +23,6 @@ func (c *Counter) Expr() []expr.Any {
 func (c *Counter) Validate() error {
 	return nil
 }
+
+// IsTerminal implements the Action interface
+func (c *Counter) IsTerminal() bool { return false }

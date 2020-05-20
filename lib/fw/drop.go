@@ -20,3 +20,6 @@ func (a *Drop) Expr() []expr.Any {
 func (a *Drop) Validate() error {
 	return nil
 }
+
+// IsTerminal implements the Action interface
+func (a *Drop) IsTerminal() bool { return true }

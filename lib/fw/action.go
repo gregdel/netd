@@ -12,6 +12,7 @@ type Action interface {
 	Type() string
 	Expr() []expr.Any
 	Validate() error
+	IsTerminal() bool
 }
 
 // Actions defines a set of actions

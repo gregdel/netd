@@ -37,3 +37,6 @@ func (l *Limit) Validate() error {
 
 	return nil
 }
+
+// IsTerminal implements the Action interface
+func (l *Limit) IsTerminal() bool { return false }

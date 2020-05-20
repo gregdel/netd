@@ -8,7 +8,8 @@ import (
 
 // Custom errors
 var (
-	ErrMissingRuleActions = errors.New("fw: missing rule actions")
+	ErrMissingRuleActions          = errors.New("fw: missing rule actions")
+	ErrStuffAfterTerminalStatement = errors.New("fw: statement after terminal statement has no effect")
 )
 
 // Rule represents a firewall rule
@@ -39,9 +40,17 @@ func (r *Rule) Validate() error {
 		return ErrMissingRuleActions
 	}
 
+	terminated := false
+
 	for _, action := range r.Actions {
+		if terminated {
+			return ErrStuffAfterTerminalStatement
+		}
 		if err := action.Validate(); err != nil {
 			return err
+		}
+		if action.IsTerminal() {
+			terminated = true
 		}
 	}
 

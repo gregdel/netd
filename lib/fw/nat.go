@@ -38,3 +38,6 @@ func (d *DNAT) Validate() error {
 
 	return nil
 }
+
+// IsTerminal implements the Action interface
+func (d *DNAT) IsTerminal() bool { return true }
